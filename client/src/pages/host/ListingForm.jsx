@@ -38,9 +38,44 @@ export default function ListingForm() {
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
+  const isValidUrl = (str) => {
+    if (!str || !str.trim()) return true;
+    try {
+      const url = new URL(str.trim());
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  const errors = {};
+  if (form.title && (form.title.trim().length < 10 || form.title.trim().length > 100)) {
+    errors.title = 'Title must be between 10 and 100 characters';
+  } else if (!form.title) {
+    errors.title = 'Title is required (10-100 characters)';
+  }
+
+  if (form.description && form.description.trim().length < 30) {
+    errors.description = 'Description must be at least 30 characters';
+  } else if (!form.description) {
+    errors.description = 'Description is required (minimum 30 characters)';
+  }
+
+  const priceNum = Number(form.pricePerNight);
+  if (!form.pricePerNight || isNaN(priceNum) || priceNum <= 0) {
+    errors.pricePerNight = 'Price per night must be greater than 0';
+  }
+
+  if (form.imageUrl && !isValidUrl(form.imageUrl)) {
+    errors.imageUrl = 'Image URL must be a valid URL';
+  }
+
+  const hasErrors = Object.keys(errors).length > 0;
+
   // TODO: replace the image URL field with real image upload (Cloudinary / multer).
   const submit = async (e) => {
     e.preventDefault();
+    if (hasErrors) return;
     setError('');
     const { title, description, type, city, state, address, imageUrl, amenities } = form;
     const payload = {
@@ -68,13 +103,22 @@ export default function ListingForm() {
   return (
     <form className="card form wide" onSubmit={submit}>
       <h1>{isEdit ? 'Edit listing' : 'Create a new listing'}</h1>
-      <input required placeholder="Title" value={form.title} onChange={set('title')} />
-      <textarea required placeholder="Describe your place" value={form.description} onChange={set('description')} />
+      <div>
+        <input required placeholder="Title" value={form.title} onChange={set('title')} />
+        {form.title && errors.title && <p className="error small">{errors.title}</p>}
+      </div>
+      <div>
+        <textarea required placeholder="Describe your place" value={form.description} onChange={set('description')} />
+        {form.description && errors.description && <p className="error small">{errors.description}</p>}
+      </div>
       <div className="row">
         <select value={form.type} onChange={set('type')}>
           {STAY_TYPES.map((t) => <option key={t}>{t}</option>)}
         </select>
-        <input required type="number" min="0" placeholder="Price per night (₹)" value={form.pricePerNight} onChange={set('pricePerNight')} />
+        <div className="grow">
+          <input required type="number" min="1" placeholder="Price per night (₹)" value={form.pricePerNight} onChange={set('pricePerNight')} />
+          {form.pricePerNight !== '' && errors.pricePerNight && <p className="error small">{errors.pricePerNight}</p>}
+        </div>
       </div>
       <div className="row">
         <input required placeholder="City" value={form.city} onChange={set('city')} />
@@ -90,9 +134,12 @@ export default function ListingForm() {
         </label>
       </div>
       <input placeholder="Amenities (comma separated: WiFi, AC, Parking)" value={form.amenities} onChange={set('amenities')} />
-      <input placeholder="Image URL (optional)" value={form.imageUrl} onChange={set('imageUrl')} />
+      <div>
+        <input placeholder="Image URL (optional)" value={form.imageUrl} onChange={set('imageUrl')} />
+        {form.imageUrl && errors.imageUrl && <p className="error small">{errors.imageUrl}</p>}
+      </div>
       {error && <p className="error">{error}</p>}
-      <button className="btn">{isEdit ? 'Save changes' : 'Publish listing'}</button>
+      <button className="btn" disabled={hasErrors}>{isEdit ? 'Save changes' : 'Publish listing'}</button>
     </form>
   );
 }
